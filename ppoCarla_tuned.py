@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,7 +11,7 @@ except ImportError:
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden=128):
+    def __init__(self, obs_dim, act_dim, hidden=256):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(obs_dim, hidden),
@@ -44,7 +42,7 @@ class ActorCritic(nn.Module):
         action = dist.sample()
         log_prob = dist.log_prob(action).sum(-1)
         return (
-            action.squeeze(0).detach().numpy(),  # [act_dim]
+            action.squeeze(0).detach().numpy(),  
             log_prob.item(),
             value.item(),
         )
@@ -56,9 +54,9 @@ class PPO:
         self,
         obs_dim,
         act_dim,
-        lr=3e-4,
+        lr=1e-4,      
         gamma=0.99,
-        clip_eps=0.2,
+        clip_eps=0.1, 
     ):
         self.gamma = gamma
         self.clip_eps = clip_eps
@@ -99,6 +97,8 @@ class PPO:
 
         advantages = returns - values.detach()
 
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
         ratio = torch.exp(new_log_probs - old_log_probs)
         unclipped = ratio * advantages
         clipped = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * advantages
@@ -106,7 +106,10 @@ class PPO:
 
         value_loss = torch.mean((returns - values) ** 2)
 
-        loss = policy_loss + 0.5 * value_loss
+        entropy = dist.entropy().sum(-1).mean()
+        entropy_coef = 0.01
+
+        loss = policy_loss + 0.5 * value_loss - entropy_coef * entropy
 
         self.opt.zero_grad()
         loss.backward()
@@ -124,8 +127,8 @@ def make_env():
 
 
 def train(
-    total_steps=50_000,
-    rollout_steps=1024,
+    total_steps=100_000,  
+    rollout_steps=2048,   
 ):
     env = make_env()
 
@@ -177,11 +180,10 @@ def train(
             step += 1
             obs = np.asarray(next_obs, dtype=np.float32)
 
-            
             if done:
                 ep += 1
                 print(f"Episode {ep}: return = {ep_return:.2f}, steps so far = {step}")
-                with open("ppo_rewards.txt", "a") as f:
+                with open("ppo_rewards_tuned.txt", "a") as f:
                     f.write(f"{ep},{ep_return}\n")
 
                 ep_return = 0.0
@@ -190,7 +192,6 @@ def train(
 
             if step >= total_steps:
                 break
-
 
         with torch.no_grad():
             flat_obs = obs.astype(np.float32).ravel()
