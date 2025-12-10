@@ -38,13 +38,13 @@ class ActorCritic(nn.Module):
         - sample an action
         - return (action, log_prob, value)
         """
-        obs_t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)  # [1, obs_dim]
+        obs_t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)  
         mu, std, value = self.forward(obs_t)
         dist = torch.distributions.Normal(mu, std)
         action = dist.sample()
         log_prob = dist.log_prob(action).sum(-1)
         return (
-            action.squeeze(0).detach().numpy(),  # [act_dim]
+            action.squeeze(0).detach().numpy(),  
             log_prob.item(),
             value.item(),
         )
