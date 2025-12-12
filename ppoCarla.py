@@ -33,11 +33,7 @@ class ActorCritic(nn.Module):
         return mu, std, value
 
     def act(self, obs):
-        """
-        Take a single observation (np.array [obs_dim]) and:
-        - sample an action
-        - return (action, log_prob, value)
-        """
+       
         obs_t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)  
         mu, std, value = self.forward(obs_t)
         dist = torch.distributions.Normal(mu, std)
@@ -66,15 +62,10 @@ class PPO:
         self.opt = optim.Adam(self.net.parameters(), lr=lr)
 
     def act(self, obs):
-        """Thin wrapper so training loop can call agent.act(...)."""
         return self.net.act(obs)
 
     def compute_returns(self, rewards, dones, last_value):
-        """
-        Simple discounted returns (no GAE).
-        rewards, dones: lists for a rollout
-        last_value: value estimate for last state (bootstrap)
-        """
+        
         R = last_value
         returns = []
         for r, d in zip(reversed(rewards), reversed(dones)):
@@ -115,11 +106,7 @@ class PPO:
 
 
 def make_env():
-    """
-    Replace this with your CARLA environment later.
-
-    For now we use CarRacing-v2 just to make sure PPO runs.
-    """
+    
     return gym.make("CarRacing-v2", render_mode=None)
 
 
